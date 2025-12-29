@@ -41,8 +41,8 @@ const VolunteerDashboard = () => {
         try {
             await axios.put(`/api/donations/${id}/claim`); // Using claim endpoint which assigns to volunteer
             // Optimistic update
-            const task = availableTasks.find(t => t._id === id);
-            setAvailableTasks(prev => prev.filter(t => t._id !== id));
+            const task = availableTasks.find(t => t.id === id);
+            setAvailableTasks(prev => prev.filter(t => t.id !== id));
             setMyTasks(prev => [task, ...prev]);
             alert("Task Accepted!");
             fetchData(); // Refresh to ensure sync
@@ -98,7 +98,7 @@ const VolunteerDashboard = () => {
                                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                                 {myTasks.map(task => (
                                                     <TaskCard
-                                                        key={task._id}
+                                                        key={task.id}
                                                         task={task}
                                                         variant="active"
                                                         actionLabel={task.status === 'claimed' ? 'Mark Picked Up' : 'Mark Delivered'}
@@ -118,7 +118,7 @@ const VolunteerDashboard = () => {
                                         </div>
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                             {availableTasks.map(task => (
-                                                <TaskCard key={task._id} task={task} onAccept={handleAcceptTask} />
+                                                <TaskCard key={task.id} task={task} onAccept={handleAcceptTask} />
                                             ))}
                                         </div>
                                     </section>

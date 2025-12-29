@@ -53,23 +53,12 @@ const NGOSidebar = ({ activeTab, setActiveTab }) => {
                         active={activeTab === 'pickups'}
                         onClick={() => setActiveTab('pickups')}
                     />
-                    <SidebarItem
-                        icon={Building2}
-                        label="Capacity Manager"
-                        active={activeTab === 'capacity'}
-                        onClick={() => setActiveTab('capacity')}
-                    />
+
                     <SidebarItem
                         icon={Users}
                         label="Volunteers"
                         active={activeTab === 'volunteers'}
                         onClick={() => setActiveTab('volunteers')}
-                    />
-                    <SidebarItem
-                        icon={ChartBar}
-                        label="Impact Analytics"
-                        active={activeTab === 'analytics'}
-                        onClick={() => setActiveTab('analytics')}
                     />
                 </nav>
             </div>

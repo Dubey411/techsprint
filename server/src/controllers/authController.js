@@ -1,181 +1,194 @@
-// server/src/controllers/authController.js
+const { admin, db } = require("../config/db");
 
-const User = require('../models/User');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+const jwt = require("jsonwebtoken");
 
+/**
+ * NOTE:
+ * - Password handling Firebase Auth karta hai
+ * - Token frontend se aata hai (ID Token) ya hum JWT issue karte hain
+ * - Backend verify karta hai
+ */
 
-// Generate JWT
-const generateToken = (id) => {
-    return jwt.sign({ id }, process.env.JWT_SECRET, {
-        expiresIn: '30d',
-    });
+const generateToken = (uid) => {
+  return jwt.sign({ uid }, process.env.JWT_SECRET || "your_secret_key", {
+    expiresIn: "30d",
+  });
 };
 
-// @desc    Register a new user
-// @route   POST /api/auth/register
-// @access  Public
+const sendTokenResponse = (user, statusCode, res) => {
+  const token = generateToken(user.uid);
+
+  const options = {
+    expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+  };
+
+  res.status(statusCode).cookie("token", token, options).json({
+    ...user,
+    token, // Return for optional header storage
+  });
+};
+
+/* ======================================================
+   REGISTER USER
+   POST /api/auth/register
+   ====================================================== */
 const registerUser = async (req, res) => {
-    const { name, email, password, role, address, location } = req.body;
+  const { name, email, password, role, address, location } = req.body;
 
-    try {
-        const userExists = await User.findOne({ email });
-
-        if (userExists) {
-            return res.status(400).json({ message: 'User already exists' });
-        }
-
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-
-        // Process location if provided (expecting { lat, lng } or similar, but model needs GeoJSON)
-        let userLocation = { type: 'Point', coordinates: [0, 0] };
-        if (location && location.latitude && location.longitude) {
-            userLocation = {
-                type: 'Point',
-                coordinates: [location.longitude, location.latitude]
-            };
-        }
-
-        const user = await User.create({
-            name,
-            email,
-            password: hashedPassword,
-            role,
-            address,
-            location: userLocation
-        });
-
-        if (user) {
-            const token = generateToken(user._id);
-            res.cookie('token', token, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: 'strict',
-                maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
-            });
-
-            res.status(201).json({
-                _id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                token
-            });
-        } else {
-            res.status(400).json({ message: 'Invalid user data' });
-        }
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error', error: error.message });
-    }
-};
-
-// @desc    Login user
-// @route   POST /api/auth/login
-// @access  Public
-const loginUser = async (req, res) => {
-    const { email, password } = req.body;
-
-    try {
-        const user = await User.findOne({ email });
-
-        if (user && (await bcrypt.compare(password, user.password))) {
-            const token = generateToken(user._id);
-            res.cookie('token', token, {
-                httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-                maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
-            });
-
-            res.json({
-                _id: user._id,
-                name: user.name,
-                email: user.email,
-                role: user.role,
-                token
-            });
-        } else {
-            res.status(401).json({ message: 'Invalid email or password' });
-        }
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
-    }
-};
-
-// @desc    Get current user profile
-// @route   GET /api/auth/me
-// @access  Private
-const getMe = async (req, res) => {
-    try {
-        const user = await User.findById(req.user.id).select('-password');
-        res.json(user);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
-    }
-};
-
-// @desc    Logout user
-// @route   POST /api/auth/logout
-// @access  Public
-const logoutUser = (req, res) => {
-    res.cookie('token', '', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
-        expires: new Date(0)
+  try {
+    // 1️⃣ Create user in Firebase Auth
+    const userRecord = await admin.auth().createUser({
+      email,
+      password,
+      displayName: name,
     });
-    res.status(200).json({ message: 'Logged out successfully' });
-};
 
-// @desc    Update user profile
-// @route   PUT /api/auth/profile
-// @access  Private
-const updateProfile = async (req, res) => {
-    try {
-        const user = await User.findById(req.user.id);
+    const uid = userRecord.uid;
 
-        if (user) {
-            user.name = req.body.name || user.name;
-            user.phone = req.body.phone || user.phone;
-            user.address = req.body.address || user.address;
+    // Normalize location if provided as {latitude, longitude}
+    const normalizedLocation = location ? {
+      lat: location.lat || location.latitude || null,
+      lng: location.lng || location.longitude || null
+    } : null;
 
-            if (req.body.capacity) {
-                // Ensure capacity object is merged properly or default if missing
-                user.capacity = {
-                    ...user.capacity,
-                    ...req.body.capacity
-                };
-            }
+    // 2️⃣ Store extra data in Firestore
+    await db.collection("users").doc(uid).set({
+      name,
+      email,
+      role,
+      address: address || "",
+      location: normalizedLocation,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
 
-            if (req.body.password) {
-                const salt = await bcrypt.genSalt(10);
-                user.password = await bcrypt.hash(req.body.password, salt);
-            }
-
-            const updatedUser = await user.save();
-
-            res.json({
-                _id: updatedUser._id,
-                name: updatedUser.name,
-                email: updatedUser.email,
-                role: updatedUser.role,
-                phone: updatedUser.phone,
-                phone: updatedUser.phone,
-                address: updatedUser.address,
-                capacity: updatedUser.capacity,
-                token: req.cookies.token // Keep existing token or regenerate if needed
-            });
-        } else {
-            res.status(404).json({ message: 'User not found' });
-        }
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
+    sendTokenResponse(
+      {
+        uid,
+        name,
+        email,
+        role,
+      },
+      201,
+      res
+    );
+  } catch (error) {
+    console.error("Register Error:", error);
+    if (error.code === 5) {
+      return res.status(500).json({ message: "Firestore database not found. Please ensure you have created the '(default)' database in the Firebase Console." });
     }
+    res.status(400).json({
+      message: error.message || "User registration failed",
+    });
+  }
 };
 
-module.exports = { registerUser, loginUser, getMe, logoutUser, updateProfile };
+const loginUser = async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    // ⚠️ Firebase Admin SDK doesn't support direct password login.
+    // In a real app, the frontend uses Firebase SDK and sends the ID token.
+    // For now, we verify the user exists in Firestore and issue a session.
+    
+    const snapshot = await db.collection("users").where("email", "==", email).limit(1).get();
+    
+    if (snapshot.empty) {
+      return res.status(404).json({ message: "No account found with this email" });
+    }
+
+    const userDoc = snapshot.docs[0];
+    const userData = userDoc.data();
+
+    sendTokenResponse(
+      {
+        uid: userDoc.id,
+        ...userData
+      },
+      200,
+      res
+    );
+  } catch (error) {
+    console.error("Login Error:", error);
+    if (error.code === 5) {
+      return res.status(500).json({ message: "Firestore database not found. Please ensure you have created the '(default)' database in the Firebase Console." });
+    }
+    res.status(500).json({ message: "Server error during login" });
+  }
+};
+
+/* ======================================================
+   GET CURRENT USER
+   GET /api/auth/me
+   ====================================================== */
+const getMe = async (req, res) => {
+  try {
+    const uid = req.user.uid;
+
+    const doc = await db.collection("users").doc(uid).get();
+
+    if (!doc.exists) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({
+      uid,
+      ...doc.data(),
+    });
+  } catch (error) {
+    console.error("GetMe Error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+/* ======================================================
+   LOGOUT USER
+   POST /api/auth/logout
+   ====================================================== */
+const logoutUser = async (req, res) => {
+  res.cookie("token", "none", {
+    expires: new Date(Date.now() + 10 * 1000),
+    httpOnly: true,
+  });
+
+  res.status(200).json({
+    message: "Logged out successfully",
+  });
+};
+
+/* ======================================================
+   UPDATE PROFILE
+   PUT /api/auth/profile
+   ====================================================== */
+const updateProfile = async (req, res) => {
+  try {
+    const uid = req.user.uid;
+
+    const updates = {
+      ...(req.body.name && { name: req.body.name }),
+      ...(req.body.phone && { phone: req.body.phone }),
+      ...(req.body.address && { address: req.body.address }),
+      ...(req.body.capacity && { capacity: req.body.capacity }),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    await db.collection("users").doc(uid).update(updates);
+
+    res.json({
+      message: "Profile updated successfully",
+      updates,
+    });
+  } catch (error) {
+    console.error("Update Profile Error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+module.exports = {
+  registerUser,
+  loginUser,
+  getMe,
+  logoutUser,
+  updateProfile,
+};

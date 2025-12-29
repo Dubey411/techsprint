@@ -80,7 +80,7 @@ const PickupCard = ({ pickup, onAccept, onViewDetails }) => {
                         View Details
                     </button>
                     <button
-                        onClick={() => onAccept(pickup._id)}
+                        onClick={() => onAccept(pickup.id)}
                         className="p-2.5 bg-emerald-50 text-emerald-600 rounded-2xl hover:bg-emerald-600 hover:text-white transition-all border border-emerald-100"
                     >
                         <CheckCircle2 className="h-5 w-5" />
@@ -122,9 +122,9 @@ const AvailablePickups = () => {
 
         socket.on('donation_updated', (updatedPickup) => {
             if (updatedPickup.status !== 'available') {
-                setPickups(prev => prev.filter(p => p._id !== updatedPickup._id));
+                setPickups(prev => prev.filter(p => p.id !== updatedPickup.id));
             } else {
-                setPickups(prev => prev.map(p => p._id === updatedPickup._id ? updatedPickup : p));
+                setPickups(prev => prev.map(p => p.id === updatedPickup.id ? updatedPickup : p));
             }
         });
 
@@ -146,7 +146,7 @@ const AvailablePickups = () => {
             await axios.put(`/api/donations/${id}/claim`);
             // Socket will handle the removal from list
             // But we could also optimistically remove it
-            setPickups(prev => prev.filter(p => p._id !== id));
+            setPickups(prev => prev.filter(p => p.id !== id));
             setSelectedPickup(null);
         } catch (error) {
             console.error("Accept failed", error);
@@ -207,7 +207,7 @@ const AvailablePickups = () => {
                     <AnimatePresence mode='popLayout'>
                         {filteredPickups.map(pickup => (
                             <PickupCard
-                                key={pickup._id}
+                                key={pickup.id}
                                 pickup={pickup}
                                 onAccept={handleAccept}
                                 onViewDetails={setSelectedPickup}
@@ -299,7 +299,7 @@ const AvailablePickups = () => {
                                         Later
                                     </button>
                                     <button
-                                        onClick={() => handleAccept(selectedPickup._id)}
+                                        onClick={() => handleAccept(selectedPickup.id)}
                                         disabled={isAccepting}
                                         className="flex-[2] py-4 bg-emerald-600 text-white rounded-2xl font-bold hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-200 uppercase tracking-widest text-xs flex items-center justify-center gap-2 disabled:bg-emerald-400"
                                     >

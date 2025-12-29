@@ -127,16 +127,12 @@ const ActivePickups = () => {
 
         socket.on('donation_updated', (updatedDonation) => {
             setPickups(prev => {
-                const exists = prev.find(p => p._id === updatedDonation._id);
+                const exists = prev.find(p => p.id === updatedDonation.id);
                 if (exists) {
-                    return prev.map(p => p._id === updatedDonation._id ? updatedDonation : p);
+                    return prev.map(p => p.id === updatedDonation.id ? updatedDonation : p);
                 }
-                // If not in list but claimed by us (this check might be complex without full user context, 
-                // but usually the backend filter handles the initial fetch. 
-                // Creating a new claimed item might need manual refresh or smarter socket payload)
                 return prev;
             });
-            // Optimization: Just refetch to be safe for now
             fetchPickups();
         });
 
@@ -160,7 +156,7 @@ const ActivePickups = () => {
     };
 
     const handleAction = (type, pickup) => {
-        console.log("Action:", type, pickup._id);
+        console.log("Action:", type, pickup.id);
         alert(`${type === 'track' ? 'Tracking' : 'Managing'} ${pickup.title}`);
     };
 
@@ -205,7 +201,7 @@ const ActivePickups = () => {
                     <AnimatePresence mode='popLayout'>
                         {filteredPickups.length > 0 ? (
                             filteredPickups.map(pickup => (
-                                <PickupCard key={pickup._id} pickup={pickup} onAction={handleAction} />
+                                <PickupCard key={pickup.id} pickup={pickup} onAction={handleAction} />
                             ))
                         ) : (
                             <motion.div

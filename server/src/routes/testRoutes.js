@@ -1,8 +1,6 @@
-// server/src/routes/testRoutes.js (create new file)
 const express = require('express');
 const router = express.Router();
-const Donation = require('../models/Donation');
-const User = require('../models/User');
+const { db } = require('../config/db');
 const { protect } = require('../middleware/authMiddleware');
 
 // Test endpoint for debugging
@@ -10,7 +8,7 @@ router.get('/test/ngo-donations', protect, async (req, res) => {
     try {
         console.log('=== TEST ENDPOINT CALLED ===');
         console.log('User:', {
-            id: req.user.id,
+            uid: req.user.uid,
             name: req.user.name,
             role: req.user.role
         });
@@ -22,39 +20,33 @@ router.get('/test/ngo-donations', protect, async (req, res) => {
             });
         }
         
-        // Try different queries
-        const queries = {
-            claimedByUser: { claimedBy: req.user.id },
-            managingNgoUser: { managingNgo: req.user.id },
-            combined: { 
-                $or: [
-                    { claimedBy: req.user.id },
-                    { managingNgo: req.user.id }
-                ]
-            }
+        // Firestore doesn't support $or across different fields in a simple way without multiple queries
+        // or using index-heavy queries. Here we'll do two separate queries for simplicity.
+        
+        const claimedBySnap = await db.collection("donations")
+            .where("claimedBy", "==", req.user.uid)
+            .get();
+            
+        const managingNgoSnap = await db.collection("donations")
+            .where("managingNgo", "==", req.user.uid)
+            .get();
+            
+        const results = {
+            claimedBy: claimedBySnap.docs.map(doc => ({ id: doc.id, ...doc.data() })),
+            managingNgo: managingNgoSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
         };
-        
-        const results = {};
-        
-        for (const [key, query] of Object.entries(queries)) {
-            results[key] = await Donation.find(query)
-                .populate('donor', 'name')
-                .populate('claimedBy', 'name')
-                .select('title status permissions');
-        }
         
         res.json({
             user: {
-                id: req.user.id,
+                uid: req.user.uid,
                 name: req.user.name,
                 role: req.user.role
             },
             results: {
-                claimedByCount: results.claimedByUser.length,
-                managingNgoCount: results.managingNgoUser.length,
-                combinedCount: results.combined.length,
-                claimedByDonations: results.claimedByUser,
-                managingNgoDonations: results.managingNgoUser
+                claimedByCount: results.claimedBy.length,
+                managingNgoCount: results.managingNgo.length,
+                claimedByDonations: results.claimedBy,
+                managingNgoDonations: results.managingNgo
             }
         });
         

@@ -159,12 +159,12 @@ const DonationTrackingMap = ({ donation }) => {
   // Socket Listener
   useEffect(() => {
     socket.on("volunteer_location", (data) => {
-      if (data.donationId === donation._id) {
+      if (data.donationId === donation.id) {
         setVolunteerPos([data.lat, data.lng]);
       }
     });
     return () => socket.off("volunteer_location");
-  }, [donation._id]);
+  }, [donation.id]);
 
   // GPS Tracking (Sender)
   useEffect(() => {
@@ -176,7 +176,7 @@ const DonationTrackingMap = ({ donation }) => {
         const { latitude, longitude } = position.coords;
         setVolunteerPos([latitude, longitude]);
         try {
-            await axios.put(`/api/location/donations/${donation._id}/location`, {
+            await axios.put(`/api/location/donations/${donation.id}/location`, {
                 lat: latitude,
                 lng: longitude
             });
@@ -189,7 +189,7 @@ const DonationTrackingMap = ({ donation }) => {
     );
 
     return () => navigator.geolocation.clearWatch(watchId);
-  }, [donation._id, donation.status]);
+  }, [donation.id, donation.status]);
 
   return (
     <MapContainer

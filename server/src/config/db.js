@@ -1,13 +1,43 @@
-const mongoose = require('mongoose');
+const admin = require("firebase-admin");
+const path = require("path");
+const fs = require("fs");
 
-const connectDB = async () => {
+// Load service account key
+const serviceAccountPath = path.resolve(__dirname, "../../firebase-service-account.json");
+
+const connectFirebase = () => {
     try {
-        const conn = await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/food-waste-db');
-        console.log(`MongoDB Connected: ${conn.connection.host}`);
+        if (!fs.existsSync(serviceAccountPath)) {
+            console.error("\n❌ FIREBASE CONFIGURATION ERROR:");
+            console.error(`   Missing file: ${serviceAccountPath}`);
+            console.error("   Please ensure 'firebase-service-account.json' is in your server root.\n");
+            return;
+        }
+
+        const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+
+        if (admin.apps.length === 0) {
+            admin.initializeApp({
+                credential: admin.credential.cert(serviceAccount),
+            });
+            console.log("🔥 Firebase Connected (Firestore)");
+        }
     } catch (error) {
-        console.error(`Error: ${error.message}`);
-        process.exit(1);
+        console.error("❌ Firebase Initialization Error:", error.message);
     }
 };
 
-module.exports = connectDB;
+// Initialize immediately
+connectFirebase();
+
+// Proxy for db to avoid null reference errors during module load
+const db = new Proxy({}, {
+    get: (target, prop) => {
+        if (admin.apps.length === 0) {
+            throw new Error("❌ Attempted to use Firestore before Firebase was initialized. Check your service account key.");
+        }
+        return admin.firestore()[prop];
+    }
+});
+
+module.exports = { admin, db, connectFirebase };

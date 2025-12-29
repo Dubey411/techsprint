@@ -1,29 +1,37 @@
 const express = require("express");
 const router = express.Router();
-const Donation = require("../models/Donation");
+const { db, admin } = require("../config/db");
 const { protect } = require("../middleware/authMiddleware");
 
 // Volunteer sends live GPS
 router.put("/donations/:id/location", protect, async (req, res) => {
   try {
     const { lat, lng } = req.body;
-    const donation = await Donation.findById(req.params.id);
+    const donationRef = db.collection("donations").doc(req.params.id);
+    const donationSnap = await donationRef.get();
 
-    if (!donation) {
+    if (!donationSnap.exists) {
       return res.status(404).json({ message: "Donation not found" });
     }
 
-    if (donation.assignedVolunteer.toString() !== req.user.id) {
+    const donation = donationSnap.data();
+
+    // In Firebase we use uid
+    if (donation.assignedVolunteer !== req.user.uid) {
       return res.status(403).json({ message: "Unauthorized" });
     }
 
-    donation.foodLocations = [{ lat, lng }];
-    await donation.save();
+    // Update location (assuming foodLocations is where we track live location or similar)
+    // Note: The previous mongo code used donation.foodLocations = [{ lat, lng }]
+    await donationRef.update({
+      foodLocations: [{ lat, lng }],
+      updatedAt: admin.firestore.FieldValue.serverTimestamp()
+    });
 
     // Emit live tracking
     if (req.app.get("io")) {
       req.app.get("io").emit("volunteer_location", {
-        donationId: donation._id,
+        donationId: req.params.id,
         lat,
         lng
       });
@@ -31,6 +39,7 @@ router.put("/donations/:id/location", protect, async (req, res) => {
 
     res.json({ success: true });
   } catch (err) {
+    console.error("Location Update Error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });

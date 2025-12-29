@@ -7,7 +7,7 @@ const NGODonationCard = ({ donation, onUpdatePermissions, onApproveVolunteer }) 
     
     // Safe defaults for donation data
     const safeDonation = {
-        _id: donation?._id || '',
+        id: donation?.id || '',
         title: donation?.title || 'Untitled Donation',
         description: donation?.description || 'No description available',
         quantity: donation?.quantity || 'Unknown',
@@ -38,7 +38,7 @@ const NGODonationCard = ({ donation, onUpdatePermissions, onApproveVolunteer }) 
     const currentPermissionOption = getCurrentPermissionOption();
     
     const handlePermissionChange = async (permission) => {
-        if (!safeDonation._id) {
+        if (!safeDonation.id) {
             console.error('No donation ID');
             return;
         }
@@ -46,7 +46,7 @@ const NGODonationCard = ({ donation, onUpdatePermissions, onApproveVolunteer }) 
         if (window.confirm(`Change permission to ${permission}?`)) {
             try {
                 if (onUpdatePermissions) {
-                    await onUpdatePermissions(safeDonation._id, permission);
+                    await onUpdatePermissions(safeDonation.id, permission);
                     setSelectedPermission(permission);
                 }
             } catch (error) {
@@ -57,14 +57,14 @@ const NGODonationCard = ({ donation, onUpdatePermissions, onApproveVolunteer }) 
     };
     
     const handleApproveVolunteer = async (volunteerId, status) => {
-        if (!safeDonation._id || !volunteerId) {
+        if (!safeDonation.id || !volunteerId) {
             console.error('Missing donation ID or volunteer ID');
             return;
         }
         
         try {
             if (onApproveVolunteer) {
-                await onApproveVolunteer(safeDonation._id, volunteerId, status);
+                await onApproveVolunteer(safeDonation.id, volunteerId, status);
             }
         } catch (error) {
             console.error('Failed to approve volunteer:', error);
@@ -198,14 +198,14 @@ const NGODonationCard = ({ donation, onUpdatePermissions, onApproveVolunteer }) 
                                                 </span>
                                                 <div className="flex gap-1">
                                                     <button
-                                                        onClick={() => handleApproveVolunteer(approval.volunteer._id, 'approved')}
+                                                        onClick={() => handleApproveVolunteer(approval.volunteer.id || approval.volunteer._id, 'approved')}
                                                         className="p-1 hover:bg-green-100 rounded transition-colors"
                                                         title="Approve"
                                                     >
                                                         <Check className="h-4 w-4 text-green-600" />
                                                     </button>
                                                     <button
-                                                        onClick={() => handleApproveVolunteer(approval.volunteer._id, 'rejected')}
+                                                        onClick={() => handleApproveVolunteer(approval.volunteer.id || approval.volunteer._id, 'rejected')}
                                                         className="p-1 hover:bg-red-100 rounded transition-colors"
                                                         title="Reject"
                                                     >

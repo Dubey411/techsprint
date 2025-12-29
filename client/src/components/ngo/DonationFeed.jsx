@@ -61,7 +61,7 @@ const DonationCard = ({ donation, onAccept, onDecline }) => {
 
                 <div className="flex flex-col gap-3 justify-center min-w-[180px]">
                     <button
-                        onClick={() => onAccept(donation._id)}
+                        onClick={() => onAccept(donation.id)}
                         className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-200 transition-all flex items-center justify-center gap-2"
                     >
                         <Check className="h-4 w-4" /> Claim Donation
@@ -76,7 +76,7 @@ const DonationCard = ({ donation, onAccept, onDecline }) => {
                             <Phone className="h-4 w-4 mr-2" /> {showContact ? 'Close' : 'Contact'}
                         </button>
                         <button
-                            onClick={() => onDecline(donation._id)}
+                            onClick={() => onDecline(donation.id)}
                             className="p-3 bg-white border border-slate-100 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-2xl transition-all"
                         >
                             <X className="h-4 w-4" />
@@ -159,7 +159,7 @@ const DonationFeed = () => {
         if (!claimingDonation || !dropLocation) return;
 
         try {
-            await axios.put(`/api/donations/${claimingDonation._id}/claim`, {
+            await axios.put(`/api/donations/${claimingDonation.id}/claim`, {
                 dropLocation: {
                     type: 'Point',
                     coordinates: [dropLocation.lng, dropLocation.lat],
@@ -168,7 +168,7 @@ const DonationFeed = () => {
             });
             
             // Remove from list
-            setDonations(prev => prev.filter(d => d._id !== claimingDonation._id));
+            setDonations(prev => prev.filter(d => d.id !== claimingDonation.id));
             alert("Donation Claimed! Volunteers can now see the drop location.");
             setShowMapModal(false);
             setClaimingDonation(null);
@@ -179,7 +179,7 @@ const DonationFeed = () => {
     };
 
     const handleDecline = (id) => {
-        setDonations(prev => prev.filter(d => d._id !== id));
+        setDonations(prev => prev.filter(d => d.id !== id));
     };
 
     if (loading) return (
@@ -207,7 +207,7 @@ const DonationFeed = () => {
                 {donations.length > 0 ? (
                     donations.map(donation => (
                         <DonationCard
-                            key={donation._id}
+                            key={donation.id}
                             donation={donation}
                             onAccept={() => handleInitiateClaim(donation)}
                             onDecline={handleDecline}

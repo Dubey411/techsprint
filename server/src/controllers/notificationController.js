@@ -1,64 +1,76 @@
-// server/src/controllers/notificationController.js
+const { db, admin } = require("../config/db");
 
-const Notification = require('../models/Notification');
-
-// @desc    Get user notifications
-// @route   GET /api/notifications
-// @access  Private
+/* ================= GET NOTIFICATIONS ================= */
 const getNotifications = async (req, res) => {
-    try {
-        const notifications = await Notification.find({ recipient: req.user.id })
-            .sort({ createdAt: -1 })
-            .limit(20);
-        res.json(notifications);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
-    }
+  try {
+    const snapshot = await db
+      .collection("notifications")
+      .where("recipient", "==", req.user.uid)
+      .orderBy("createdAt", "desc")
+      .limit(20)
+      .get();
+
+    const notifications = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    res.json(notifications);
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
 };
 
-// @desc    Mark notification as read
-// @route   PUT /api/notifications/:id/read
-// @access  Private
+/* ================= MARK AS READ ================= */
 const markAsRead = async (req, res) => {
-    try {
-        const notification = await Notification.findById(req.params.id);
+  try {
+    const ref = db.collection("notifications").doc(req.params.id);
+    const doc = await ref.get();
 
-        if (!notification) {
-            return res.status(404).json({ message: 'Notification not found' });
-        }
-
-        if (notification.recipient.toString() !== req.user.id) {
-            return res.status(401).json({ message: 'Not authorized' });
-        }
-
-        notification.read = true;
-        await notification.save();
-
-        res.json(notification);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
+    if (!doc.exists) {
+      return res.status(404).json({ message: "Notification not found" });
     }
+
+    if (doc.data().recipient !== req.user.uid) {
+      return res.status(401).json({ message: "Not authorized" });
+    }
+
+    await ref.update({
+      read: true,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    res.json({ id: ref.id, read: true });
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
 };
 
-// @desc    Create a notification (Internal Use)
-const createNotification = async (recipientId, message, type = 'info', relatedId = null, onModel = null) => {
-    try {
-        await Notification.create({
-            recipient: recipientId,
-            message,
-            type,
-            relatedId,
-            onModel
-        });
-    } catch (error) {
-        console.error('Notification creation failed:', error);
-    }
+/* ================= CREATE NOTIFICATION (INTERNAL) ================= */
+const createNotification = async (
+  recipientId,
+  message,
+  type = "info",
+  relatedId = null,
+  onModel = null
+) => {
+  try {
+    await db.collection("notifications").add({
+      recipient: recipientId,
+      message,
+      type,
+      relatedId,
+      onModel,
+      read: false,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  } catch (error) {
+    console.error("Notification creation failed:", error);
+  }
 };
 
 module.exports = {
-    getNotifications,
-    markAsRead,
-    createNotification
+  getNotifications,
+  markAsRead,
+  createNotification,
 };

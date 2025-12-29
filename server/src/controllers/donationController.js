@@ -1,235 +1,207 @@
-const Donation = require('../models/Donation');
-const User = require('../models/User');
-const { createNotification } = require('./notificationController');
+const { db, admin } = require("../config/db");
+const { createNotification } = require("./notificationController");
 
-// @desc    Create a new donation
-// @route   POST /api/donations
-// @access  Private (Restaurant/Donor)
+/* ================= CREATE DONATION ================= */
 const createDonation = async (req, res) => {
-    try {
-        const { title, description, foodType, quantity, expiryDate, location } = req.body;
+  try {
+    const { title, description, foodType, quantity, expiryDate, location } = req.body;
 
-        // Default to user's location if not provided
-        let donationLocation = location;
-        if (!donationLocation && req.user.location) {
-            donationLocation = req.user.location;
-        }
+    let donationLocation = location || req.user.location || null;
 
-        const donation = await Donation.create({
-            donor: req.user.id,
-            title,
-            description,
-            foodType,
-            quantity,
-            expiryDate,
-            location: donationLocation
-        });
+    const ref = await db.collection("donations").add({
+      donor: req.user.uid,
+      title,
+      description,
+      foodType,
+      quantity,
+      expiryDate,
+      location: donationLocation,
+      status: "available",
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
 
-        // Emitting socket event for real-time notification
-        if (req.app.get('io')) {
-            req.app.get('io').emit('new_donation', donation);
-        }
+    const donation = { id: ref.id };
 
-        res.status(201).json(donation);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
+    if (req.app.get("io")) {
+      req.app.get("io").emit("new_donation", donation);
     }
+
+    res.status(201).json(donation);
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
 };
 
-// @desc    Get all donations (Admin) or available donations (NGO/Volunteer)
-// @route   GET /api/donations
-// @access  Private
+/* ================= GET DONATIONS ================= */
 const getDonations = async (req, res) => {
-    try {
-        const { lat, lng, radius, status } = req.query;
+  try {
+    const status = req.query.status || "available";
 
-        let query = {};
+    const snapshot = await db
+      .collection("donations")
+      .where("status", "==", status)
+      .get();
 
-        // Filter by status if provided, otherwise show available
-        if (status) {
-            query.status = status;
-        } else {
-            // For volunteers, we might want 'available' or 'claimed' (which implies ready for pickup)
-            // For now default to available
-            query.status = 'available';
-        }
+    const donations = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
 
-        if (lat && lng) {
-            const distance = radius ? parseInt(radius) * 1000 : 10000; // Default 10km
-            query.location = {
-                $near: {
-                    $geometry: { type: 'Point', coordinates: [parseFloat(lng), parseFloat(lat)] },
-                    $maxDistance: distance
-                }
-            };
-        }
-
-        const donations = await Donation.find(query)
-            .populate('donor', 'name address phone')
-            .populate('claimedBy', 'name address phone')
-            .populate('assignedVolunteer', 'name');
-        res.json(donations);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
-    }
+    res.json(donations);
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
 };
 
-// @desc    Claim a donation
-// @route   PUT /api/donations/:id/claim
-// @access  Private (NGO/Volunteer)
+/* ================= CLAIM DONATION ================= */
 const claimDonation = async (req, res) => {
-    try {
-        const donation = await Donation.findById(req.params.id);
+  try {
+    const ref = db.collection("donations").doc(req.params.id);
+    const doc = await ref.get();
 
-        if (!donation) {
-            return res.status(404).json({ message: 'Donation not found' });
-        }
-
-        if (req.user.role === 'ngo') {
-            if (donation.status !== 'available') {
-                return res.status(400).json({ message: 'Donation already claimed' });
-            }
-            donation.status = 'claimed';
-            donation.claimedBy = req.user.id;
-            
-            // Save drop location if provided
-            if (req.body.dropLocation) {
-                donation.dropLocation = req.body.dropLocation;
-            }
-        } else if (req.user.role === 'volunteer') {
-            // Volunteer can claim if available (direct) OR if claimed by NGO but no volunteer yet
-            if (donation.status === 'available') {
-                 donation.status = 'claimed';
-                 donation.assignedVolunteer = req.user.id;
-            } else if (donation.status === 'claimed' && !donation.assignedVolunteer) {
-                 // NGO has claimed, now Volunteer takes the delivery task
-                 donation.assignedVolunteer = req.user.id;
-            } else {
-                 return res.status(400).json({ message: 'Donation not available for pickup' });
-            }
-        }
-
-        await donation.save();
-
-        if (req.app.get('io')) {
-            req.app.get('io').emit('donation_updated', donation);
-        }
-
-        // Notify Donor
-        await createNotification(
-            donation.donor,
-            `Your donation "${donation.title}" has been claimed by ${req.user.name}.`,
-            'success',
-            donation._id,
-            'Donation'
-        );
-
-        res.json(donation);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
+    if (!doc.exists) {
+      return res.status(404).json({ message: "Donation not found" });
     }
+
+    const donation = doc.data();
+    const updates = {};
+
+    if (req.user.role === "ngo") {
+      if (donation.status !== "available") {
+        return res.status(400).json({ message: "Donation already claimed" });
+      }
+      updates.status = "claimed";
+      updates.claimedBy = req.user.uid;
+      if (req.body.dropLocation) updates.dropLocation = req.body.dropLocation;
+    }
+
+    if (req.user.role === "volunteer") {
+      if (donation.status === "available") {
+        updates.status = "claimed";
+        updates.assignedVolunteer = req.user.uid;
+      } else if (donation.status === "claimed" && !donation.assignedVolunteer) {
+        updates.assignedVolunteer = req.user.uid;
+      } else {
+        return res.status(400).json({ message: "Donation not available" });
+      }
+    }
+
+    updates.updatedAt = admin.firestore.FieldValue.serverTimestamp();
+    await ref.update(updates);
+
+    if (req.app.get("io")) {
+      req.app.get("io").emit("donation_updated", { id: ref.id, ...updates });
+    }
+
+    if (donation.donor) {
+      await createNotification(
+        donation.donor,
+        `Your donation "${donation.title}" has been claimed.`,
+        "success",
+        ref.id,
+        "Donation"
+      );
+    }
+
+    res.json({ id: ref.id, ...updates });
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
 };
 
-// @desc    Get donations created by current user (Restaurant)
-// @route   GET /api/donations/my
-// @access  Private
+/* ================= MY DONATIONS ================= */
 const getMyDonations = async (req, res) => {
-    try {
-        const donations = await Donation.find({ donor: req.user.id }).sort({ createdAt: -1 });
-        res.json(donations);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
-    }
+  try {
+    const snapshot = await db
+      .collection("donations")
+      .where("donor", "==", req.user.uid)
+      .get();
+
+    const donations = snapshot.docs.map(d => ({
+      id: d.id,
+      ...d.data(),
+    }));
+
+    res.json(donations);
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
 };
 
-// @desc    Get tasks assigned to volunteer
-// @route   GET /api/donations/tasks
-// @access  Private (Volunteer)
+/* ================= VOLUNTEER TASKS ================= */
 const getVolunteerTasks = async (req, res) => {
-    try {
-        const tasks = await Donation.find({ assignedVolunteer: req.user.id, status: { $in: ['claimed', 'picked_up'] } })
-            .populate('donor', 'name address phone location')
-            .populate('claimedBy', 'name address phone location') // Add if claimed by NGO
-            .sort({ createdAt: -1 });
-        res.json(tasks);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
-    }
+  try {
+    const snapshot = await db
+      .collection("donations")
+      .where("assignedVolunteer", "==", req.user.uid)
+      .get();
+
+    const tasks = snapshot.docs.map(d => ({
+      id: d.id,
+      ...d.data(),
+    }));
+
+    res.json(tasks);
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
 };
 
-// @desc    Update task status (e.g. picked_up, completed)
-// @route   PUT /api/donations/:id/status
-// @access  Private (Volunteer)
+/* ================= UPDATE TASK STATUS ================= */
 const updateTaskStatus = async (req, res) => {
-    try {
-        const { status } = req.body;
-        const donation = await Donation.findById(req.params.id);
+  try {
+    const { status } = req.body;
+    const ref = db.collection("donations").doc(req.params.id);
+    const doc = await ref.get();
 
-        if (!donation) return res.status(404).json({ message: 'Donation not found' });
+    if (!doc.exists) return res.status(404).json({ message: "Donation not found" });
 
-        if (donation.assignedVolunteer.toString() !== req.user.id) {
-            return res.status(403).json({ message: 'Not authorized' });
-        }
-
-        donation.status = status;
-        await donation.save();
-
-        if (req.app.get('io')) {
-            req.app.get('io').emit('donation_updated', donation);
-        }
-
-        const action = status === 'picked_up' ? 'picked up' : 'delivered';
-
-        // Notify Donor
-        await createNotification(
-            donation.donor,
-            `Your donation "${donation.title}" has been ${action}.`,
-            'info',
-            donation._id,
-            'Donation'
-        );
-
-        // Notify ClaimedBy (NGO) if exists and not same as current user (Volunteer picking up for NGO)
-        if (donation.claimedBy && donation.claimedBy.toString() !== req.user.id) {
-            await createNotification(
-                donation.claimedBy,
-                `Donation "${donation.title}" has been ${action} by ${req.user.name}.`,
-                'info',
-                donation._id,
-                'Donation'
-            );
-        }
-
-        res.json(donation);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
+    const donation = doc.data();
+    if (donation.assignedVolunteer !== req.user.uid) {
+      return res.status(403).json({ message: "Not authorized" });
     }
+
+    await ref.update({
+      status,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    if (req.app.get("io")) {
+      req.app.get("io").emit("donation_updated", { id: ref.id, status });
+    }
+
+    res.json({ id: ref.id, status });
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
 };
 
-// @desc    Get donations claimed by current NGO
-// @route   GET /api/donations/claimed
-// @access  Private (NGO)
+/* ================= CLAIMED DONATIONS (NGO) ================= */
 const getClaimedDonations = async (req, res) => {
-    try {
-        const donations = await Donation.find({
-            claimedBy: req.user.id,
-            status: { $ne: 'expired' } // Fetch all active/completed history, or filter further in frontend
-        })
-            .populate('donor', 'name address phone location')
-            .populate('assignedVolunteer', 'name phone location')
-            .sort({ updatedAt: -1 });
+  try {
+    const snapshot = await db
+      .collection("donations")
+      .where("claimedBy", "==", req.user.uid)
+      .get();
 
-        res.json(donations);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server error' });
-    }
+    const donations = snapshot.docs.map(d => ({
+      id: d.id,
+      ...d.data(),
+    }));
+
+    res.json(donations);
+  } catch (error) {
+    res.status(500).json({ message: "Server error" });
+  }
 };
 
-module.exports = { createDonation, getDonations, claimDonation, getMyDonations, getVolunteerTasks, updateTaskStatus, getClaimedDonations };
+module.exports = {
+  createDonation,
+  getDonations,
+  claimDonation,
+  getMyDonations,
+  getVolunteerTasks,
+  updateTaskStatus,
+  getClaimedDonations,
+};

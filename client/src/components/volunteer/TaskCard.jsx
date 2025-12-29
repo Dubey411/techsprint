@@ -51,7 +51,7 @@ const TaskCard = ({ task, onAccept, onViewMap, actionLabel = "Accept Task", vari
             )}
 
             <button
-                onClick={() => onAccept(task._id)}
+                onClick={() => onAccept(task.id)}
                 className={`w-full py-2.5 rounded-xl font-semibold flex items-center justify-center space-x-2 transition-all ${variant === 'available'
                         ? 'bg-slate-900 text-white hover:bg-emerald-600 hover:shadow-lg hover:shadow-emerald-200'
                         : 'bg-emerald-600 text-white hover:bg-emerald-700'

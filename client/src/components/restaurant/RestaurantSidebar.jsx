@@ -61,12 +61,7 @@ const RestaurantSidebar = ({ activeTab, setActiveTab }) => {
                         active={activeTab === 'impact'}
                         onClick={() => setActiveTab('impact')}
                     />
-                    <SidebarItem
-                        icon={Award}
-                        label="Reputation"
-                        active={activeTab === 'reputation'}
-                        onClick={() => setActiveTab('reputation')}
-                    />
+
                 </nav>
             </div>
 

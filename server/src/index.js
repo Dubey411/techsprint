@@ -1,13 +1,10 @@
 require('dotenv').config();
 const express = require('express');
-const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const http = require('http');
 const { Server } = require('socket.io');
-
-
 const app = express();
 const server = http.createServer(app);
 
@@ -23,8 +20,8 @@ app.use(helmet());
 app.use(morgan('dev'));
 
 // Database Connection
-const connectDB = require('./config/db');
-connectDB();
+const { connectFirebase } = require('./config/db');
+connectFirebase();
 
 // Socket.io Setup
 const io = new Server(server, {
