@@ -13,6 +13,7 @@ const VolunteerDashboard = () => {
     const [activeTab, setActiveTab] = useState('overview');
     const [availableTasks, setAvailableTasks] = useState([]);
     const [myTasks, setMyTasks] = useState([]);
+    const [activeTask, setActiveTask] = useState(null);
     const [loading, setLoading] = useState(true);
 
     const stats = { meals: 120, hours: 45 }; // Mock stats for now
@@ -20,10 +21,10 @@ const VolunteerDashboard = () => {
     const fetchData = async () => {
         try {
             const [availableRes, myTasksRes] = await Promise.all([
-                axios.get('/api/donations?status=available'), // &lat=...&lng=... for geo
+                axios.get('/api/donations?status=claimed'),
                 axios.get('/api/donations/tasks')
             ]);
-            setAvailableTasks(availableRes.data);
+            setAvailableTasks(availableRes.data.filter(d => !d.assignedVolunteer));
             setMyTasks(myTasksRes.data);
         } catch (error) {
             console.error('Error fetching data:', error);
@@ -59,6 +60,11 @@ const VolunteerDashboard = () => {
             console.error("Update failed", error);
         }
     }
+
+    const handleViewMap = (task) => {
+        setActiveTask(task);
+        setActiveTab('map');
+    };
 
     return (
         <div className="flex h-screen bg-slate-50 font-sans text-slate-900">
@@ -97,6 +103,7 @@ const VolunteerDashboard = () => {
                                                         variant="active"
                                                         actionLabel={task.status === 'claimed' ? 'Mark Picked Up' : 'Mark Delivered'}
                                                         onAccept={(id) => handleUpdateStatus(id, task.status === 'claimed' ? 'picked_up' : 'completed')}
+                                                        onViewMap={() => handleViewMap(task)}
                                                     />
                                                 ))}
                                             </div>
@@ -119,7 +126,7 @@ const VolunteerDashboard = () => {
                             )}
 
                             {activeTab === 'map' && (
-                                <RouteMap />
+                                <RouteMap donation={activeTask} />
                             )}
 
                             {activeTab === 'available' && (

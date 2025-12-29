@@ -1,7 +1,7 @@
 import { MapPin, Clock, ArrowRight, Package } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-const TaskCard = ({ task, onAccept, actionLabel = "Accept Task", variant = "available" }) => {
+const TaskCard = ({ task, onAccept, onViewMap, actionLabel = "Accept Task", variant = "available" }) => {
     const isUrgent = new Date(task.expiryDate) < new Date(new Date().getTime() + 2 * 60 * 60 * 1000); // Less than 2 hours
 
     return (
@@ -43,6 +43,13 @@ const TaskCard = ({ task, onAccept, actionLabel = "Accept Task", variant = "avai
                 </div>
             </div>
 
+            {task.claimedBy && (
+                <div className="flex items-center text-sm text-orange-600 font-medium mb-4 bg-orange-50 p-2 rounded-lg">
+                    <MapPin className="h-4 w-4 mr-2" />
+                    <span className="truncate">Confirm By: {task.claimedBy.name || 'NGO'}</span>
+                </div>
+            )}
+
             <button
                 onClick={() => onAccept(task._id)}
                 className={`w-full py-2.5 rounded-xl font-semibold flex items-center justify-center space-x-2 transition-all ${variant === 'available'
@@ -53,6 +60,16 @@ const TaskCard = ({ task, onAccept, actionLabel = "Accept Task", variant = "avai
                 <span>{actionLabel}</span>
                 <ArrowRight className="h-4 w-4" />
             </button>
+            
+            {variant === 'active' && (
+                <button
+                    onClick={onViewMap}
+                    className="w-full mt-3 py-2.5 rounded-xl font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors flex items-center justify-center space-x-2"
+                >
+                    <MapPin className="h-4 w-4" />
+                    <span>View Map</span>
+                </button>
+            )}
         </motion.div>
     );
 };

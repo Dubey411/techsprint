@@ -66,15 +66,37 @@ const NGODashboard = () => {
                                 attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                             />
                             {donations.map(d => (
-                                d.location && d.location.coordinates && (
-                                    <Marker key={d._id} position={[d.location.coordinates[1], d.location.coordinates[0]]}>
-                                        <Popup>
-                                            <strong>{d.title}</strong><br />
-                                            {d.quantity}<br />
-                                            <button onClick={() => handleClaim(d._id)} className="bg-blue-600 text-white px-2 py-1 rounded text-xs mt-2">Claim</button>
-                                        </Popup>
-                                    </Marker>
-                                )
+                                <>
+                                    {d.location && d.location.coordinates && (
+                                        <Marker key={d._id} position={[d.location.coordinates[1], d.location.coordinates[0]]}>
+                                            <Popup>
+                                                <strong>{d.title}</strong><br />
+                                                {d.quantity}<br />
+                                                <button onClick={() => handleClaim(d._id)} className="bg-blue-600 text-white px-2 py-1 rounded text-xs mt-2">Claim</button>
+                                            </Popup>
+                                        </Marker>
+                                    )}
+                                    {d.foodLocations && d.foodLocations.map((loc, idx) => (
+                                        <Marker 
+                                            key={`${d._id}-food-${idx}`} 
+                                            position={[loc.lat, loc.lng]}
+                                            icon={new L.Icon({
+                                                iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-green.png',
+                                                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+                                                iconSize: [25, 41],
+                                                iconAnchor: [12, 41],
+                                                popupAnchor: [1, -34],
+                                                shadowSize: [41, 41]
+                                            })}
+                                        >
+                                            <Popup>
+                                                <strong>{d.title} (Food Location #{idx + 1})</strong><br />
+                                                {d.quantity}<br />
+                                                <button onClick={() => handleClaim(d._id)} className="bg-blue-600 text-white px-2 py-1 rounded text-xs mt-2">Claim</button>
+                                            </Popup>
+                                        </Marker>
+                                    ))}
+                                </>
                             ))}
                         </MapContainer>
                     </div>

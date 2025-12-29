@@ -1,3 +1,5 @@
+// server/src/controllers/analyticsController.js
+
 const Donation = require('../models/Donation');
 
 // @desc    Get NGO Impact Analytics

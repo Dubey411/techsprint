@@ -1,3 +1,5 @@
+// server/src/controllers/notificationController.js
+
 const Notification = require('../models/Notification');
 
 // @desc    Get user notifications

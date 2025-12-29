@@ -5,7 +5,7 @@ import RoleSelection from './pages/auth/RoleSelection';
 import Signup from './pages/auth/Signup';
 import ProtectedRoute from './components/ProtectedRoute';
 import Landing from './pages/Landing';
-import { useAuth } from './context/AuthContext';
+
 
 import Dashboard from './pages/Dashboard';
 

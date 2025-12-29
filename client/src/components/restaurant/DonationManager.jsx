@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Clock, Plus, Sparkles, AlertCircle, CheckCircle } from 'lucide-react';
+import { Calendar, Clock, Plus, Sparkles, AlertCircle, CheckCircle, MapPin, X, Globe } from 'lucide-react';
 import axios from 'axios';
+import LocationPickerMap from '../common/LocationPickerMap';
 
 const DonationManager = () => {
     const [formData, setFormData] = useState({
@@ -10,7 +11,11 @@ const DonationManager = () => {
         quantity: '',
         expiryDate: '',
         description: '',
+        location: null,
     });
+    const [locationStatus, setLocationStatus] = useState('idle'); // idle, loading, success, error
+    const [showMapModal, setShowMapModal] = useState(false);
+    const [tempMapLocation, setTempMapLocation] = useState(null);
     const [suggestions, setSuggestions] = useState(null);
     const [loading, setLoading] = useState(false);
     const [success, setSuccess] = useState(false);
@@ -32,6 +37,31 @@ const DonationManager = () => {
         }
     };
 
+    const handleGetLocation = () => {
+        if (!navigator.geolocation) {
+            alert("Geolocation is not supported by your browser");
+            return;
+        }
+
+        setLocationStatus('loading');
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                setFormData(prev => ({
+                    ...prev,
+                    location: {
+                        type: 'Point',
+                        coordinates: [position.coords.longitude, position.coords.latitude]
+                    }
+                }));
+                setLocationStatus('success');
+            },
+            (error) => {
+                console.error("Error getting location", error);
+                setLocationStatus('error');
+            }
+        );
+    };
+
     const applySuggestion = () => {
         if (suggestions) {
             setFormData(prev => ({ ...prev, expiryDate: suggestions.expiry }));
@@ -41,24 +71,85 @@ const DonationManager = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        if (!formData.location) {
+            alert("Please select a pickup location (GPS or Map) before submitting.");
+            return;
+        }
+
         setLoading(true);
         try {
             await axios.post('/api/donations', formData, {
                 withCredentials: true
             });
             setSuccess(true);
-            setFormData({ title: '', foodType: 'veg', quantity: '', expiryDate: '', description: '' });
+            setFormData({ title: '', foodType: 'veg', quantity: '', expiryDate: '', description: '', location: null });
             setTimeout(() => setSuccess(false), 3000);
         } catch (error) {
             console.error("Failed to post donation", error);
-            alert("Error posting donation");
+            if (error.response && error.response.status === 403) {
+                alert("Permission Denied: You must be logged in as a RESTAURANT to post donations.");
+            } else {
+                const sdkMsg = error.response?.data?.message || "Error posting donation. Please try again.";
+                alert(`Failed: ${sdkMsg}`);
+            }
         } finally {
             setLoading(false);
         }
     };
 
+    const handleConfirmMapLocation = () => {
+        if (tempMapLocation) {
+            setFormData(prev => ({
+                ...prev,
+                location: {
+                    type: 'Point',
+                    coordinates: [tempMapLocation.lng, tempMapLocation.lat]
+                }
+            }));
+            setLocationStatus('success');
+            setShowMapModal(false);
+        }
+    };
+
     return (
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-3xl mx-auto relative">
+             {/* Map Modal */}
+             <AnimatePresence>
+                {showMapModal && (
+                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                        <motion.div 
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-white rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl"
+                        >
+                            <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+                                <h3 className="font-bold text-lg">Select Pickup Location</h3>
+                                <button onClick={() => setShowMapModal(false)} className="p-2 hover:bg-slate-100 rounded-full">
+                                    <X className="h-5 w-5 text-slate-500" />
+                                </button>
+                            </div>
+                            <div className="h-96 w-full relative">
+                                <LocationPickerMap 
+                                    onLocationSelect={setTempMapLocation} 
+                                    initialPosition={formData.location ? { lat: formData.location.coordinates[1], lng: formData.location.coordinates[0] } : null}
+                                />
+                            </div>
+                            <div className="p-4 border-t border-slate-100 flex justify-end space-x-3">
+                                <button onClick={() => setShowMapModal(false)} className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-50 rounded-lg">Cancel</button>
+                                <button 
+                                    onClick={handleConfirmMapLocation}
+                                    className="px-6 py-2 bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800"
+                                >
+                                    Confirm Location
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
             <div className="mb-8">
                 <h2 className="text-2xl font-bold text-slate-900">Add New Donation</h2>
                 <p className="text-slate-500">List surplus food for pickup. Our engine will match you with the nearest NGO.</p>
@@ -67,6 +158,46 @@ const DonationManager = () => {
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
                 <div className="p-8">
                     <form onSubmit={handleSubmit} className="space-y-6">
+
+                        {/* Location Prompt */}
+                        <div className="flex items-center justify-between bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                            <div className="flex items-center space-x-3">
+                                <div className="bg-emerald-100 p-2 rounded-full text-emerald-600">
+                                    <MapPin className="h-5 w-5" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold text-emerald-900">Set Pickup Location</p>
+                                    <p className="text-xs text-emerald-700">
+                                        {locationStatus === 'success' 
+                                            ? 'Location captured successfully!' 
+                                            : 'Share exact GPS coordinates for better pickup.'}
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="flex space-x-2">
+                                <button
+                                    type="button"
+                                    onClick={handleGetLocation}
+                                    disabled={locationStatus === 'loading'}
+                                    className={`px-3 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center ${
+                                        locationStatus === 'success'
+                                            ? 'bg-emerald-100 text-emerald-800'
+                                            : 'bg-emerald-600 text-white hover:bg-emerald-700'
+                                    }`}
+                                >
+                                     {locationStatus === 'loading' ? '...' : <MapPin className="h-4 w-4 mr-1" />}
+                                     {locationStatus === 'success' ? 'Located' : 'GPS'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowMapModal(true)}
+                                    className="px-3 py-2 rounded-lg text-sm font-semibold bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50 flex items-center"
+                                >
+                                    <Globe className="h-4 w-4 mr-1" />
+                                    Map
+                                </button>
+                            </div>
+                        </div>
 
                         {/* Food Basics */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

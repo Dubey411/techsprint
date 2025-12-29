@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
-import { MapPin, Clock, Weight, ChevronRight, Check, X, Phone, MessageSquare, Info } from 'lucide-react';
+import { MapPin, Clock, Weight, ChevronRight, Check, X, Phone, MessageSquare, Info, Globe } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
+import LocationPickerMap from '../common/LocationPickerMap';
 
 const DonationCard = ({ donation, onAccept, onDecline }) => {
     const [showContact, setShowContact] = useState(false);
@@ -63,7 +64,7 @@ const DonationCard = ({ donation, onAccept, onDecline }) => {
                         onClick={() => onAccept(donation._id)}
                         className="w-full py-4 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-blue-700 hover:shadow-lg hover:shadow-blue-200 transition-all flex items-center justify-center gap-2"
                     >
-                        <Check className="h-4 w-4" /> Accept Rescue
+                        <Check className="h-4 w-4" /> Claim Donation
                     </button>
 
                     <div className="flex gap-2">
@@ -117,19 +118,18 @@ const DonationFeed = () => {
     const { user } = useAuth();
     const [donations, setDonations] = useState([]);
     const [loading, setLoading] = useState(true);
+    
+    // Drop Location State
+    const [showMapModal, setShowMapModal] = useState(false);
+    const [claimingDonation, setClaimingDonation] = useState(null);
+    const [dropLocation, setDropLocation] = useState(null);
 
     const fetchDonations = useCallback(async () => {
         try {
-            // Priority: User's registered location coordinates
-            let url = '/api/donations?radius=50';
-            if (user?.location?.coordinates) {
-                const [lng, lat] = user.location.coordinates;
-                url += `&lat=${lat}&lng=${lng}`;
-            } else {
-                // Fallback to Delhi coordinates if no location set
-                url += '&lat=28.6139&lng=77.2090';
-            }
-
+            // Fetch ALL available donations for now to ensure we see them
+            // In prod, would use geo-query: /api/donations?radius=50&lat=...
+            const url = '/api/donations?status=available';
+            
             const { data } = await axios.get(url);
             setDonations(data);
         } catch (error) {
@@ -143,14 +143,38 @@ const DonationFeed = () => {
         fetchDonations();
     }, [fetchDonations]);
 
-    const handleAccept = async (id) => {
-        if (window.confirm("Confirm acceptance? This will notify the restaurant you are coming.")) {
-            try {
-                await axios.put(`/api/donations/${id}/claim`);
-                setDonations(prev => prev.filter(d => d._id !== id));
-            } catch (error) {
-                alert("Failed to claim donation");
-            }
+    const handleInitiateClaim = (donation) => {
+        setClaimingDonation(donation);
+        // Default to user's location if available, else null
+        if (user?.location?.coordinates) {
+             setDropLocation({
+                 lat: user.location.coordinates[1],
+                 lng: user.location.coordinates[0]
+             });
+        }
+        setShowMapModal(true);
+    };
+
+    const handleConfirmClaim = async () => {
+        if (!claimingDonation || !dropLocation) return;
+
+        try {
+            await axios.put(`/api/donations/${claimingDonation._id}/claim`, {
+                dropLocation: {
+                    type: 'Point',
+                    coordinates: [dropLocation.lng, dropLocation.lat],
+                    address: "NGO Location" // Could reverse geocode if needed
+                }
+            });
+            
+            // Remove from list
+            setDonations(prev => prev.filter(d => d._id !== claimingDonation._id));
+            alert("Donation Claimed! Volunteers can now see the drop location.");
+            setShowMapModal(false);
+            setClaimingDonation(null);
+        } catch (error) {
+            console.error("Failed to claim", error);
+            alert("Failed to claim donation");
         }
     };
 
@@ -170,12 +194,12 @@ const DonationFeed = () => {
             <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div>
                     <h2 className="text-4xl font-black text-slate-900 tracking-tight">Rescue Feed</h2>
-                    <p className="text-slate-500 font-medium mt-1 uppercase text-xs tracking-widest">Showing surplus food within 50km of your hub.</p>
+                    <p className="text-slate-500 font-medium mt-1 uppercase text-xs tracking-widest">Available donations from restaurants.</p>
                 </div>
                 <div className="flex gap-4">
-                    <div className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-xl flex items-center text-[10px] font-black uppercase tracking-wider border border-emerald-100">
-                        <Check className="h-4 w-4 mr-2" /> Live Map Active
-                    </div>
+                    <button onClick={fetchDonations} className="px-4 py-2 bg-slate-900 text-white rounded-xl text-[10px] font-black uppercase tracking-wider">
+                        Refresh
+                    </button>
                 </div>
             </div>
 
@@ -185,7 +209,7 @@ const DonationFeed = () => {
                         <DonationCard
                             key={donation._id}
                             donation={donation}
-                            onAccept={handleAccept}
+                            onAccept={() => handleInitiateClaim(donation)}
                             onDecline={handleDecline}
                         />
                     ))
@@ -198,8 +222,8 @@ const DonationFeed = () => {
                         <div className="h-24 w-24 bg-blue-50 rounded-full mx-auto flex items-center justify-center mb-8">
                             <Check className="h-10 w-10 text-blue-600" />
                         </div>
-                        <h3 className="font-black text-slate-900 text-3xl mb-2 tracking-tight uppercase">Zone Secured</h3>
-                        <p className="text-slate-500 font-medium max-w-sm mx-auto">No pending food rescues found in your sector. Systems are monitoring for new listings.</p>
+                        <h3 className="font-black text-slate-900 text-3xl mb-2 tracking-tight uppercase">No New Donations</h3>
+                        <p className="text-slate-500 font-medium max-w-sm mx-auto">There are no available donations to claim right now.</p>
                         <button
                             onClick={fetchDonations}
                             className="mt-10 px-6 py-3 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all"
@@ -210,15 +234,58 @@ const DonationFeed = () => {
                 )}
             </AnimatePresence>
 
-            <div className="mt-12 p-6 bg-blue-50 rounded-3xl border border-blue-100 flex items-center gap-4">
-                <div className="p-3 bg-white rounded-2xl text-blue-600 shadow-sm">
-                    <Info className="h-6 w-6" />
-                </div>
-                <div>
-                    <h4 className="font-bold text-blue-900 text-sm">Real-time Matching</h4>
-                    <p className="text-xs text-blue-700/70 font-medium mt-0.5">We automatically refresh this feed as restaurants post new batches near your hub.</p>
-                </div>
-            </div>
+
+            {/* Location Verification Modal */}
+            <AnimatePresence>
+                {showMapModal && (
+                    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-white rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl"
+                        >
+                            <div className="p-4 border-b border-slate-100 flex justify-between items-center">
+                                <div>
+                                    <h3 className="font-bold text-lg text-slate-900">Confirm Drop Location</h3>
+                                    <p className="text-xs text-slate-500">Where should the volunteer deliver this?</p>
+                                </div>
+                                <button onClick={() => setShowMapModal(false)} className="p-2 hover:bg-slate-100 rounded-full">
+                                    <X className="h-5 w-5 text-slate-500" />
+                                </button>
+                            </div>
+                            
+                            <div className="h-80 w-full relative">
+                                <LocationPickerMap
+                                    onLocationSelect={setDropLocation}
+                                    initialPosition={dropLocation}
+                                />
+                                <div className="absolute top-4 left-4 right-4 bg-white/90 backdrop-blur-sm p-3 rounded-xl border border-slate-200 text-xs text-slate-600 shadow-sm">
+                                    <MapPin className="h-4 w-4 inline-block mr-1 text-red-500" />
+                                    Drag the marker to the exact drop-off point for your NGO.
+                                </div>
+                            </div>
+
+                            <div className="p-4 border-t border-slate-100 flex justify-end space-x-3 bg-slate-50">
+                                <button 
+                                    onClick={() => setShowMapModal(false)} 
+                                    className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-lg text-sm"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleConfirmClaim}
+                                    disabled={!dropLocation}
+                                    className="px-6 py-2 bg-slate-900 text-white font-bold rounded-lg hover:bg-slate-800 text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <Check className="h-4 w-4 mr-2" />
+                                    Confirm & Claim
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

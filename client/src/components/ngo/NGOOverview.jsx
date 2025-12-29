@@ -1,5 +1,14 @@
 import { motion } from 'framer-motion';
-import { Package, Truck, Users, Activity, ArrowUpRight } from 'lucide-react';
+import {
+  Package,
+  Truck,
+  Users,
+  Activity,
+  ArrowUpRight,
+  Clock,
+  TrendingUp
+} from 'lucide-react';
+
 
 const StatCard = ({ icon: Icon, title, value, sub, color, delay }) => (
     <motion.div

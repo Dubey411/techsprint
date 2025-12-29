@@ -65,7 +65,10 @@ const getDonations = async (req, res) => {
             };
         }
 
-        const donations = await Donation.find(query).populate('donor', 'name address phone');
+        const donations = await Donation.find(query)
+            .populate('donor', 'name address phone')
+            .populate('claimedBy', 'name address phone')
+            .populate('assignedVolunteer', 'name');
         res.json(donations);
     } catch (error) {
         console.error(error);
@@ -84,16 +87,28 @@ const claimDonation = async (req, res) => {
             return res.status(404).json({ message: 'Donation not found' });
         }
 
-        if (donation.status !== 'available') {
-            return res.status(400).json({ message: 'Donation already claimed' });
-        }
-
         if (req.user.role === 'ngo') {
+            if (donation.status !== 'available') {
+                return res.status(400).json({ message: 'Donation already claimed' });
+            }
             donation.status = 'claimed';
             donation.claimedBy = req.user.id;
+            
+            // Save drop location if provided
+            if (req.body.dropLocation) {
+                donation.dropLocation = req.body.dropLocation;
+            }
         } else if (req.user.role === 'volunteer') {
-            donation.status = 'claimed'; // Or 'pickup_in_progress' if we want to distinguish
-            donation.assignedVolunteer = req.user.id;
+            // Volunteer can claim if available (direct) OR if claimed by NGO but no volunteer yet
+            if (donation.status === 'available') {
+                 donation.status = 'claimed';
+                 donation.assignedVolunteer = req.user.id;
+            } else if (donation.status === 'claimed' && !donation.assignedVolunteer) {
+                 // NGO has claimed, now Volunteer takes the delivery task
+                 donation.assignedVolunteer = req.user.id;
+            } else {
+                 return res.status(400).json({ message: 'Donation not available for pickup' });
+            }
         }
 
         await donation.save();

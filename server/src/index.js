@@ -7,6 +7,7 @@ const morgan = require('morgan');
 const http = require('http');
 const { Server } = require('socket.io');
 
+
 const app = express();
 const server = http.createServer(app);
 
@@ -53,6 +54,11 @@ app.use('/api/donations', require('./routes/donationRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/users', require('./routes/userRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
+const testRoutes = require('./routes/testRoutes');
+app.use("/api/location", require("./routes/locationRoutes"));
+app.use('/api/test', testRoutes);
+
+
 
 app.get('/', (req, res) => {
     res.send('Food Wastage Reduction API is running');
