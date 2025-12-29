@@ -20,8 +20,8 @@ app.use(helmet());
 app.use(morgan('dev'));
 
 // Database Connection
-const { connectFirebase } = require('./config/db');
-connectFirebase();
+require('./config/db');
+
 
 // Socket.io Setup
 const io = new Server(server, {
