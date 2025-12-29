@@ -1,0 +1,16 @@
+# Node
+node_modules
+
+# Environment
+.env
+
+# Firebase secrets (CRITICAL)
+firebase-service-account.json
+
+# Debug / test files (optional but recommended)
+debug-*.js
+debug-*.txt
+debug-output*.txt
+test-*.js
+firestore-*.txt
+simple-debug.js
