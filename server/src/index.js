@@ -87,6 +87,9 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log("Health Check: Fix Applied (v2)");
+});
 
 module.exports = { app, io };
