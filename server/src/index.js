@@ -20,7 +20,8 @@ const allowedOrigins = [
 
 app.use(cors({
     origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
+        const isAllowed = allowedOrigins.includes(origin) || (origin && origin.endsWith('.vercel.app'));
+        if (!origin || isAllowed) {
             callback(null, true);
         } else {
             callback(new Error('Not allowed by CORS'));
@@ -40,7 +41,8 @@ require('./config/db');
 const io = new Server(server, {
     cors: {
         origin: (origin, callback) => {
-            if (!origin || allowedOrigins.includes(origin)) {
+            const isAllowed = allowedOrigins.includes(origin) || (origin && origin.endsWith('.vercel.app'));
+            if (!origin || isAllowed) {
                 callback(null, true);
             } else {
                 callback(new Error('Not allowed by CORS'));
