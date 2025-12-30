@@ -78,7 +78,15 @@ const AuthContext = createContext();
 export const useAuth = () => useContext(AuthContext);
 
 // 🔥 Axios config (Render backend)
-axios.defaults.baseURL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL;
+
+if (!API_URL && import.meta.env.PROD) {
+  console.error("❌ CRITICAL: VITE_API_URL is missing in production! API calls will fail.");
+}
+
+console.log("📍 API Base URL:", API_URL || "(relative)");
+
+axios.defaults.baseURL = API_URL;
 axios.defaults.withCredentials = false; // ❌ no cookies
 
 // 🔥 Attach Firebase token to every request

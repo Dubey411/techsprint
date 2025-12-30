@@ -8,5 +8,9 @@ const firebaseConfig = {
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
 };
 
+if (!firebaseConfig.apiKey && import.meta.env.PROD) {
+  console.error("❌ CRITICAL: Firebase API Key is missing in production! Auth will fail.");
+}
+
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
