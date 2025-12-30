@@ -7,10 +7,18 @@ node_modules
 # Firebase secrets (CRITICAL)
 firebase-service-account.json
 
-# Debug / test files (optional but recommended)
+# Debug / test files
+*.log
+*.txt
 debug-*.js
-debug-*.txt
-debug-output*.txt
 test-*.js
-firestore-*.txt
+check_*.js
+cleanup-data.js
+create_test_users.js
+full-debug-*.js
+list-*.js
 simple-debug.js
+test_*.js
+
+# Editor
+.vscode

@@ -1,8 +1,0 @@
-[2025-12-30T16:59:18.207Z] Register Error: The email address is already in use by another account.
-Stack: Error: The email address is already in use by another account.
-    at FirebaseAuthError.fromServerError (C:\Hacky\TechSprint\server\node_modules\firebase-admin\lib\utils\error.js:148:16)
-    at C:\Hacky\TechSprint\server\node_modules\firebase-admin\lib\auth\auth-api-request.js:1629:49
-    at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
-    at async registerUser (C:\Hacky\TechSprint\server\src\controllers\authController.js:48:26)
-Body: {"name":"Shubham","email":"ex1234@gmail.com","password":"Dubey@123","role":"restaurant","address":"Mumbai","location":{"latitude":19.09734582295082,"longitude":73.0093981},"phone":"8591694929"}
-
