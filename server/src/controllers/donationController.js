@@ -1,6 +1,44 @@
 const { db, admin } = require("../config/db");
 const { createNotification } = require("./notificationController");
 
+/* ================= HELPERS ================= */
+const populateUserData = async (donations) => {
+  const userIds = new Set();
+  donations.forEach(d => {
+    if (d.donor) userIds.add(d.donor);
+    if (d.claimedBy) userIds.add(d.claimedBy);
+    if (d.assignedVolunteer) userIds.add(d.assignedVolunteer);
+  });
+
+  if (userIds.size === 0) return donations;
+
+  const users = {};
+  const userDocs = await Promise.all(
+    Array.from(userIds).map(id => db.collection("users").doc(id).get())
+  );
+
+  userDocs.forEach(doc => {
+    if (doc.exists) {
+        const data = doc.data();
+        users[doc.id] = {
+            id: doc.id,
+            name: data.name,
+            role: data.role,
+            address: data.address,
+            location: data.location,
+            phone: data.phone
+        };
+    }
+  });
+
+  return donations.map(d => ({
+    ...d,
+    donor: typeof d.donor === 'string' ? users[d.donor] || { name: 'Unknown Donor' } : d.donor,
+    claimedBy: typeof d.claimedBy === 'string' ? users[d.claimedBy] || { name: 'Unknown NGO' } : d.claimedBy,
+    assignedVolunteer: typeof d.assignedVolunteer === 'string' ? users[d.assignedVolunteer] || null : d.assignedVolunteer
+  }));
+};
+
 /* ================= CREATE DONATION ================= */
 const createDonation = async (req, res) => {
   try {
@@ -43,13 +81,16 @@ const getDonations = async (req, res) => {
       .where("status", "==", status)
       .get();
 
-    const donations = snapshot.docs.map(doc => ({
+    let donations = snapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data(),
     }));
 
+    donations = await populateUserData(donations);
+
     res.json(donations);
   } catch (error) {
+    console.error("Get Donations Error:", error);
     res.status(500).json({ message: "Server error" });
   }
 };
@@ -118,10 +159,12 @@ const getMyDonations = async (req, res) => {
       .where("donor", "==", req.user.uid)
       .get();
 
-    const donations = snapshot.docs.map(d => ({
+    let donations = snapshot.docs.map(d => ({
       id: d.id,
       ...d.data(),
     }));
+
+    donations = await populateUserData(donations);
 
     res.json(donations);
   } catch (error) {
@@ -137,10 +180,12 @@ const getVolunteerTasks = async (req, res) => {
       .where("assignedVolunteer", "==", req.user.uid)
       .get();
 
-    const tasks = snapshot.docs.map(d => ({
+    let tasks = snapshot.docs.map(d => ({
       id: d.id,
       ...d.data(),
     }));
+
+    tasks = await populateUserData(tasks);
 
     res.json(tasks);
   } catch (error) {
@@ -185,10 +230,12 @@ const getClaimedDonations = async (req, res) => {
       .where("claimedBy", "==", req.user.uid)
       .get();
 
-    const donations = snapshot.docs.map(d => ({
+    let donations = snapshot.docs.map(d => ({
       id: d.id,
       ...d.data(),
     }));
+
+    donations = await populateUserData(donations);
 
     res.json(donations);
   } catch (error) {

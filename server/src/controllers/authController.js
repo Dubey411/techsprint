@@ -38,14 +38,25 @@ const registerUser = async (req, res) => {
   const { name, email, password, role, address, location } = req.body;
 
   try {
-    // 1️⃣ Create user in Firebase Auth
-    const userRecord = await admin.auth().createUser({
-      email,
-      password,
-      displayName: name,
-    });
-
-    const uid = userRecord.uid;
+    let uid;
+    
+    // 1️⃣ Try to create user in Firebase Auth
+    try {
+      const userRecord = await admin.auth().createUser({
+        email,
+        password,
+        displayName: name,
+      });
+      uid = userRecord.uid;
+    } catch (authError) {
+      // If user already exists in Auth (e.g. created by frontend first), get their UID
+      if (authError.code === 'auth/email-already-in-use') {
+        const existingUser = await admin.auth().getUserByEmail(email);
+        uid = existingUser.uid;
+      } else {
+        throw authError; // Rethrow other auth errors
+      }
+    }
 
     // Normalize location if provided as {latitude, longitude}
     const normalizedLocation = location ? {
@@ -53,15 +64,17 @@ const registerUser = async (req, res) => {
       lng: location.lng || location.longitude || null
     } : null;
 
-    // 2️⃣ Store extra data in Firestore
-    await db.collection("users").doc(uid).set({
+    // 2️⃣ Store extra data in Firestore (Upsert)
+    const userRef = db.collection("users").doc(uid);
+    await userRef.set({
       name,
       email,
       role,
       address: address || "",
       location: normalizedLocation,
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
-    });
+    }, { merge: true });
 
     sendTokenResponse(
       {
