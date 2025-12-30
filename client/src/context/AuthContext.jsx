@@ -184,6 +184,34 @@ export const AuthProvider = ({ children }) => {
       return data;
     } catch (firebaseErr) {
       console.error("Firebase Register Detailed Error:", firebaseErr);
+      
+      // If user already exists in Firebase Auth, try to repair the account
+      if (firebaseErr.code === 'auth/email-already-in-use') {
+        console.log("User exists in Auth, attempting to repair account...");
+        try {
+          // Try to sign in to get the ID token
+          const loginCred = await signInWithEmailAndPassword(auth, email, password);
+          const token = await loginCred.user.getIdToken();
+          
+          // Call register endpoint to create/update Firestore doc
+          const { data } = await axios.post("/api/auth/register", userData, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+          
+          setUser(data);
+          return data;
+        } catch (repairErr) {
+          console.error("Account repair failed:", repairErr);
+          // If the password is wrong, throw a helpful error
+          if (repairErr.code === 'auth/invalid-credential' || repairErr.code === 'auth/wrong-password') {
+            throw new Error("This email is already registered with a different password. Please use the login page instead.");
+          }
+          throw repairErr;
+        }
+      }
+      
       throw firebaseErr;
     }
   };
