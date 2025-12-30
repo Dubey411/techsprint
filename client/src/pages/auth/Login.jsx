@@ -33,7 +33,18 @@ const Login = () => {
             navigate('/dashboard');
         } catch (err) {
             console.error("Login Error:", err);
-            setError(err.response?.data?.message || 'Invalid credentials');
+            
+            let displayError = 'Invalid credentials';
+            
+            if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+                displayError = 'Incorrect email or password. Please try again.';
+            } else if (err.code === 'auth/too-many-requests') {
+                displayError = 'Too many failed attempts. Please try again later.';
+            } else if (err.response?.data?.message) {
+                displayError = err.response.data.message;
+            }
+
+            setError(displayError);
             setLoading(false);
         }
     };

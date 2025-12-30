@@ -123,44 +123,54 @@ export const AuthProvider = ({ children }) => {
 
   // 🔐 LOGIN (Firebase)
   const login = async (email, password) => {
-    const userCred = await signInWithEmailAndPassword(
-      auth,
-      email,
-      password
-    );
+    try {
+      const userCred = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
 
-    const token = await userCred.user.getIdToken();
+      const token = await userCred.user.getIdToken();
 
-    const { data } = await axios.get("/api/auth/me", {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+      const { data } = await axios.get("/api/auth/me", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-    setUser(data);
-    return data;
+      setUser(data);
+      return data;
+    } catch (firebaseErr) {
+      console.error("Firebase Login Detailed Error:", firebaseErr);
+      throw firebaseErr;
+    }
   };
 
   // 📝 REGISTER
   const register = async (userData) => {
     const { email, password } = userData;
 
-    const userCred = await createUserWithEmailAndPassword(
-      auth,
-      email,
-      password
-    );
+    try {
+      const userCred = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
 
-    const token = await userCred.user.getIdToken();
+      const token = await userCred.user.getIdToken();
 
-    const { data } = await axios.post("/api/auth/register", userData, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+      const { data } = await axios.post("/api/auth/register", userData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-    setUser(data);
-    return data;
+      setUser(data);
+      return data;
+    } catch (firebaseErr) {
+      console.error("Firebase Register Detailed Error:", firebaseErr);
+      throw firebaseErr;
+    }
   };
 
   // 🚪 LOGOUT

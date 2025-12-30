@@ -58,7 +58,25 @@ const Signup = () => {
             await register(formData);
             navigate('/dashboard');
         } catch (err) {
-            setError(err.response?.data?.message || 'Registration failed. Please try again.');
+            console.error("Signup Catch Block:", err);
+            
+            let displayError = 'Registration failed. Please try again.';
+            
+            // Handle Firebase specific errors
+            if (err.code === 'auth/email-already-in-use') {
+                displayError = 'This email is already registered. Please try logging in instead.';
+            } else if (err.code === 'auth/weak-password') {
+                displayError = 'Password is too weak. Please use at least 6 characters.';
+            } else if (err.code === 'auth/invalid-email') {
+                displayError = 'Invalid email address format.';
+            } else if (err.response?.data?.message) {
+                // Handle Backend specific errors
+                displayError = err.response.data.message;
+            } else if (err.message) {
+                displayError = err.message;
+            }
+
+            setError(displayError);
             setLoading(false);
         }
     };
