@@ -1,0 +1,105 @@
+﻿≡ƒöÑ Firebase Connected (Firestore)
+[dotenv@17.2.3] injecting env (3) from .env -- tip: ΓÜÖ∩╕Å  load multiple .env files with { path: ['.env.local', '.env'] }
+
+=== FIREBASE AUTH USERS ===
+Found 13 users in Firebase Auth:
+
+- UID: G86SjRuGpXfdyBnshLuCFlMBbZ52
+  Email: iran04911@gmail.com
+  Email Verified: false
+  Disabled: false
+-------------------
+- UID: QIu26Sn677gbXNjpCj0KYLiTru03
+  Email: shubh1@gmail.com
+  Email Verified: false
+  Disabled: false
+-------------------
+- UID: RVAjyFmZkxNjULpXeO7Jo4XdnMv1
+  Email: shubh9619@gmail.com
+  Email Verified: false
+  Disabled: false
+-------------------
+- UID: ToPYTyrY4hbApRhJvaWObHfd5GV2
+  Email: shubh49@gmail.com
+  Email Verified: false
+  Disabled: false
+-------------------
+- UID: bejxsMRSUzQ41ppIwjWFDeE7dt82
+  Email: qa@gmail.com
+  Email Verified: false
+  Disabled: false
+-------------------
+- UID: byy8huSiBjYEjtguDcA7VTwwoPd2
+  Email: yours32@gmail.com
+  Email Verified: false
+  Disabled: false
+-------------------
+- UID: cHhAZyMDxrVNnl4ShAF2UmPwWbk2
+  Email: kardakakshat@gmail.com
+  Email Verified: false
+  Disabled: false
+-------------------
+- UID: ded8LlChqdb3vcfLXtMCguYuOTf2
+  Email: shubh6949@gmail.com
+  Email Verified: false
+  Disabled: false
+-------------------
+- UID: s650VThP5sfB2dZEZ90KPSiVPB03
+  Email: you@gmail.com
+  Email Verified: false
+  Disabled: false
+-------------------
+- UID: u2CUcFKqhed8nFBGMTPp0IjPGLA2
+  Email: dubeytech9619@gmail.com
+  Email Verified: false
+  Disabled: false
+-------------------
+- UID: wOaGvV5xLhTtIHXVDFQvvJpAsI23
+  Email: dube19@gmail.com
+  Email Verified: false
+  Disabled: false
+-------------------
+- UID: zKs41HaY42PVbYnL5IklzklVtMl2
+  Email: shubh69@gmail.com
+  Email Verified: false
+  Disabled: false
+-------------------
+- UID: zoD3yErVoud6EpuAiz5PsGD8Z2B2
+  Email: yours@gmail.com
+  Email Verified: false
+  Disabled: false
+-------------------
+
+=== FIRESTORE USERS ===
+Found 3 users in Firestore:
+
+- UID: ToPYTyrY4hbApRhJvaWObHfd5GV2
+  Email: shubh49@gmail.com
+  Role: ngo
+  Name: NGO
+-------------------
+- UID: ded8LlChqdb3vcfLXtMCguYuOTf2
+  Email: shubh6949@gmail.com
+  Role: restaurant
+  Name: Hotel
+-------------------
+- UID: u2CUcFKqhed8nFBGMTPp0IjPGLA2
+  Email: dubeytech9619@gmail.com
+  Role: volunteer
+  Name: Shubham Dubey
+-------------------
+
+=== SYNC CHECK ===
+Users in Auth but NOT in Firestore:
+  - iran04911@gmail.com (G86SjRuGpXfdyBnshLuCFlMBbZ52)
+  - shubh1@gmail.com (QIu26Sn677gbXNjpCj0KYLiTru03)
+  - shubh9619@gmail.com (RVAjyFmZkxNjULpXeO7Jo4XdnMv1)
+  - qa@gmail.com (bejxsMRSUzQ41ppIwjWFDeE7dt82)
+  - yours32@gmail.com (byy8huSiBjYEjtguDcA7VTwwoPd2)
+  - kardakakshat@gmail.com (cHhAZyMDxrVNnl4ShAF2UmPwWbk2)
+  - you@gmail.com (s650VThP5sfB2dZEZ90KPSiVPB03)
+  - dube19@gmail.com (wOaGvV5xLhTtIHXVDFQvvJpAsI23)
+  - shubh69@gmail.com (zKs41HaY42PVbYnL5IklzklVtMl2)
+  - yours@gmail.com (zoD3yErVoud6EpuAiz5PsGD8Z2B2)
+
+Users in Firestore but NOT in Auth:
