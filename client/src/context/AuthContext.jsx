@@ -184,9 +184,12 @@ export const AuthProvider = ({ children }) => {
       return data;
     } catch (firebaseErr) {
       console.error("Firebase Register Detailed Error:", firebaseErr);
+      console.log("Error Code:", firebaseErr.code); // DEBUG for prod
       
       // If user already exists in Firebase Auth, try to repair the account
-      if (firebaseErr.code === 'auth/email-already-in-use') {
+      // Check both code and message to be safe in production
+      if (firebaseErr.code === 'auth/email-already-in-use' || 
+          (firebaseErr.message && firebaseErr.message.includes('email-already-in-use'))) {
         console.log("User exists in Auth, attempting to repair account...");
         try {
           // Try to sign in to get the ID token
