@@ -26,16 +26,15 @@ A comprehensive full-stack application designed to connect Donors, NGOs, and Vol
 ### Server (Backend)
 - **Runtime**: [Node.js](https://nodejs.org/)
 - **Framework**: [Express.js](https://expressjs.com/)
-- **Database**: [MongoDB](https://www.mongodb.com/) (Mongoose ODM)
-- **Authentication**: JWT (JSON Web Tokens) & Firebase Admin
+- **Database**: [Firebase Firestore](https://firebase.google.com/docs/firestore) (NoSQL)
+- **Authentication**: JWT & Firebase Auth
 - **Real-time**: Socket.io
 
 ## 📦 Installation & Setup
 
 ### Prerequisites
 - Node.js (v16 or higher)
-- MongoDB installed locally or a MongoDB Atlas connection string
-- Firebase project credentials
+- Firebase Project with Firestore enabled
 
 ### 1. Clone the Repository
 ```bash
@@ -53,11 +52,10 @@ npm install
 Create a `.env` file in the `server` directory with the following variables:
 ```env
 PORT=5000
-MONGO_URI=your_mongodb_connection_string
-JWT_SECRET=your_jwt_secret_key
-FIREBASE_SERVICE_ACCOUNT=path_to_firebase_credentials.json or credentials
+CLIENT_URL=http://localhost:5173
+FIREBASE_SERVICE_ACCOUNT={"type":"service_account",...} # One-line JSON or path to file
 ```
-*Note: Check `server/src/config` or source code for all required environment variables.*
+*Note: Ensure `firebase-service-account.json` is present if not using the ENV variable string.*
 
 Start the server:
 ```bash
@@ -71,12 +69,14 @@ cd ../client
 npm install
 ```
 
-Create a `.env` file in the `client` directory (if required) for Firebase config:
+Create a `.env` file in the `client` directory:
 ```env
 VITE_FIREBASE_API_KEY=your_api_key
 VITE_FIREBASE_AUTH_DOMAIN=your_auth_domain
 VITE_FIREBASE_PROJECT_ID=your_project_id
-# Add other Firebase config keys
+VITE_FIREBASE_STORAGE_BUCKET=your_storage_bucket
+VITE_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
+VITE_FIREBASE_APP_ID=your_app_id
 ```
 
 Start the development server:
@@ -86,10 +86,9 @@ npm run dev
 
 ## 🏃‍♂️ Running the Application
 
-1. Ensure MongoDB is running.
-2. Start the Backend Server (runs on `http://localhost:5000` by default).
-3. Start the Frontend Client (runs on `http://localhost:5173` by default).
-4. Open your browser and navigate to the client URL.
+1. Start the Backend Server.
+2. Start the Frontend Client.
+3. Open `http://localhost:5173` to view the app.
 
 ## 📂 Project Structure
 
@@ -99,18 +98,18 @@ TechSprint/
 │   ├── public/
 │   ├── src/
 │   │   ├── components/     # Reusable UI components
-│   │   ├── content/        # Context providers (Auth, etc.)
-│   │   ├── pages/          # Application pages (Login, Dashboard, etc.)
+│   │   ├── context/        # Auth Context
+│   │   ├── pages/          # Application pages
 │   │   └── ...
 │   ├── index.html
 │   └── package.json
 ├── server/                 # Express Backend
 │   ├── src/
-│   │   ├── config/         # DB and app configuration
-│   │   ├── controllers/    # Route logic
-│   │   ├── models/         # Mongoose models
-│   │   ├── routes/         # API routes
-│   │   └── index.js        # Entry point
+│   │   ├── config/         # Firebase configuration
+│   │   ├── controllers/    # API Controllers
+│   │   ├── models/         # Firestore Schema Docs
+│   │   ├── routes/         # Express Routes
+│   │   └── index.js        # Server Entry
 │   └── package.json
 └── README.md
 ```
