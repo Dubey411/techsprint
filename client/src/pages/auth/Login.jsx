@@ -42,6 +42,8 @@ const Login = () => {
                 displayError = 'Too many failed attempts. Please try again later.';
             } else if (err.response?.data?.message) {
                 displayError = err.response.data.message;
+            } else if (err.message) {
+                displayError = err.message;
             }
 
             setError(displayError);

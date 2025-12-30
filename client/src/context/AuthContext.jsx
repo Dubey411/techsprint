@@ -140,17 +140,24 @@ export const AuthProvider = ({ children }) => {
 
       const token = await userCred.user.getIdToken();
 
-      const { data } = await axios.get("/api/auth/me", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      setUser(data);
-      return data;
-    } catch (firebaseErr) {
-      console.error("Firebase Login Detailed Error:", firebaseErr);
-      throw firebaseErr;
+      try {
+        const { data } = await axios.get("/api/auth/me", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        setUser(data);
+        return data;
+      } catch (backendErr) {
+        console.error("Backend Auth Verification Failed:", backendErr);
+        if (backendErr.response?.status === 401 || backendErr.response?.status === 404) {
+          throw new Error("Account found, but profile data is missing. Please try registering again with this email to fix your account.");
+        }
+        throw backendErr;
+      }
+    } catch (err) {
+      console.error("Login Detailed Error:", err);
+      throw err;
     }
   };
 
