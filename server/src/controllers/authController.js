@@ -1,5 +1,6 @@
 const { admin, db } = require("../config/db");
 
+
 const jwt = require("jsonwebtoken");
 
 /**
@@ -50,7 +51,7 @@ const registerUser = async (req, res) => {
       uid = userRecord.uid;
     } catch (authError) {
       // If user already exists in Auth (e.g. created by frontend first), get their UID
-      if (authError.code === 'auth/email-already-in-use') {
+      if (authError.code === 'auth/email-already-in-use' || authError.message.includes('already in use')) {
         const existingUser = await admin.auth().getUserByEmail(email);
         uid = existingUser.uid;
       } else {
