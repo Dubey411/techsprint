@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'https://techsprint-bn51.onrender.com',
         changeOrigin: true,
         secure: false,
       },

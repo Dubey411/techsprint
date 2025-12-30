@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from "react";
 import { io } from "socket.io-client";
 import "leaflet-routing-machine/dist/leaflet-routing-machine.css";
 
-const socket = io("http://localhost:5000");
+const socket = io(import.meta.env.VITE_SERVER_URL || "http://localhost:5000");
 
 // Routing Component
 const RoutingMachine = ({ hotel, ngo, volunteer, onRouteFound }) => {

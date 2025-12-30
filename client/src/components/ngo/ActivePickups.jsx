@@ -4,7 +4,7 @@ import io from 'socket.io-client';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Truck, Clock, MapPin, User, CheckCircle, AlertTriangle, Phone, MoreVertical, Filter, RefreshCw } from 'lucide-react';
 
-const socket = io('http://localhost:5000');
+const socket = io(import.meta.env.VITE_SERVER_URL || 'http://localhost:5000');
 
 const PickupCard = ({ pickup, onAction }) => {
     const getStatusColor = (status) => {
