@@ -2,6 +2,28 @@
 
 A comprehensive full-stack application designed to connect Donors, NGOs, and Volunteers to facilitate and streamline the process of donations (likely food or resource distribution).
 
+## Vecel Link: 
+https://techsprint-ten.vercel.app/
+
+# Preview 
+
+## Landing Page
+<img width="1911" height="919" alt="Screenshot 2025-12-30 235807" src="https://github.com/user-attachments/assets/a33b54f7-4591-4e77-9133-c973e9e6930b" />
+
+## Donating Food
+<img width="1892" height="906" alt="Screenshot 2025-12-31 000136" src="https://github.com/user-attachments/assets/48585eed-d754-4fd6-8bc2-c3638b0ac68f" />
+
+## Rescue Food
+<img width="1904" height="909" alt="Screenshot 2025-12-31 000319" src="https://github.com/user-attachments/assets/17eae66e-ab2c-4d6b-988d-5a1c83d0b4dd" />
+
+## Accepting food
+<img width="1890" height="902" alt="Screenshot 2025-12-31 000637" src="https://github.com/user-attachments/assets/560e0c7c-521b-44cb-82cb-8f14416703ec" />
+
+## Tracking Food Location
+<img width="1876" height="729" alt="Screenshot 2025-12-31 001048" src="https://github.com/user-attachments/assets/6554a85f-9258-47de-abea-3356e9519afb" />
+
+
+
 ## 🚀 Features
 
 - **Role-Based Authentication**: Secure login and signup for different user roles:
